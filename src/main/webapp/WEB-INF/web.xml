@@ -1,0 +1,21 @@
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee" version="6.0">
+  <display-name>Archetype Created Web Application</display-name>
+
+<welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+<error-page>
+    <exception-type>java.lang.Throwable</exception-type>
+    <location>/error_pantalla.jsp</location>
+</error-page>
+
+<error-page>
+    <error-code>404</error-code>
+    <location>/error_pantalla.jsp</location>
+</error-page>
+
+<error-page>
+    <error-code>500</error-code>
+    <location>/error_pantalla.jsp</location>
+</error-page>
+</web-app>
