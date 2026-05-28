@@ -1,0 +1,5 @@
+[build]
+cmd = "mvn package -DskipTests"
+
+[deploy]
+cmd = "java $JAVA_OPTS -jar target/dependency/webapp-runner.jar --port $PORT target/java18tpi_.war"
