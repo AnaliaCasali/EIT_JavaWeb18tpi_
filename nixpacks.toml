@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["mvn package -DskipTests"]
+
+[start]
+cmd = "java $JAVA_OPTS -jar target/dependency/webapp-runner.jar --port $PORT target/*.war"
