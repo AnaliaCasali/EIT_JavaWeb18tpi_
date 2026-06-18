@@ -43,14 +43,23 @@ public class LoginControllerServlet extends HttpServlet {
                 .findFirst()
                 .orElse(null);
 
+
+
+
+
             if (jugadorAutenticado != null) {
                 HttpSession session = request.getSession();
-                session.setAttribute("usuarioLogueado", jugadorAutenticado);
-                response.sendRedirect(request.getContextPath() + "/DashboardServlet");
+                session.setAttribute("usuarioLogueado",
+                    jugadorAutenticado);
+                response.sendRedirect(request.getContextPath()
+                    + "/DashboardServlet");
             } else {
                 request.setAttribute("errorMsg", "Clanes denegados. Nickname/Email o contraseña incorrectos.");
                 request.getRequestDispatcher("index.jsp").forward(request, response);
             }
+
+
+
 
         } catch (Exception e) {
             // SI ALGO FALLA, ESTO LO MUESTRA EN LA PANTALLA EN LUGAR DEL ERROR 500
@@ -77,6 +86,9 @@ public class LoginControllerServlet extends HttpServlet {
         }
         
         // 4. Redirigimos al usuario al Login usando el Context Path para evitar errores de rutas
-        response.sendRedirect(request.getContextPath() + "/index.jsp");
+        response.sendRedirect(request.getContextPath() +
+            "/index.jsp");
     }    
 }
+
+

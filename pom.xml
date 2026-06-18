@@ -54,7 +54,7 @@
     </dependencies>
 
     <build>
-        <finalName>java18tpi_</finalName>
+        <finalName>java18tpi</finalName>
 
         <plugins>
             <plugin>

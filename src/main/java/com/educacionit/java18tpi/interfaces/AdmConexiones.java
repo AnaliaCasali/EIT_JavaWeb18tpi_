@@ -44,11 +44,12 @@ public interface AdmConexiones {
 
 				// 2. Fallback: leer del archivo database.properties (desarrollo local)
 				Properties dbProperties = new Properties();
+/*				*/
 				dbProperties.load(
-						Thread.currentThread()
-								.getContextClassLoader()
+						Connection.class.getClassLoader()
 								.getResourceAsStream("database.properties")
 				);
+
 				DRIVER             = dbProperties.getProperty("db.driver");
 				DB_CADENA_CONEXION = dbProperties.getProperty("db.url");
 				DB_USUARIO         = dbProperties.getProperty("db.user", "root");
