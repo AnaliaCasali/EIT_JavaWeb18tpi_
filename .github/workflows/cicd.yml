@@ -1,48 +1,93 @@
-name: Java CI/CD Pipeline con Docker & secrets
+name: Java CI/CD Pipeline con Docker (Secrets)
 
 on:
-  push:    # 👉workflow: inicia el pipeline cuando hay un push
+  push:
     branches: [ "main" ]
-  pull_request:   # 👉workflow: inicia el pipeline cuando hay un pull
+  pull_request:
     branches: [ "main" ]
+
+env:
+  IMAGE_NAME: gamer-app
+  CONTAINER_NAME: gamer_java_app
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest   # 👉 job: se ejecuta en un runner Ubuntu
+    runs-on: ubuntu-latest
+
+    services:
+      # 1. Base de datos aislada para pruebas unitarias/integración de Maven
+      mysql-test:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASS }}
+          MYSQL_DATABASE: gamermatch_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      # 1. Descargar el código del repositorio
+      # 2. Descargar el código fuente
       - name: Checkout del código
-        uses: actions/checkout@v4   # 👉 Steps: Descarga el código del repositorio
+        uses: actions/checkout@v4
 
-
-      # 2. Configurar el entorno de Java 17 para chequear la compilación previa de Maven
+      # 3. Configurar entorno de ejecución Java
       - name: Set up JDK 17
-        uses: actions/setup-java@v4  # 👉 Steps uses
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
 
-      # 3. Compilar el proyecto localmente para asegurar que no haya errores de sintaxis
-      - name: Compilar con Maven
-        run: mvn clean compile   # 👉 Steps  run
+      # 4. Validar compilación inicial omitiendo pruebas pesadas
+      - name: Compilar con Maven (Sanity Check)
+        run: mvn clean package -DskipTests
 
-      # 4. Configurar Docker Buildx (herramienta avanzada de Docker para compilar eficientemente)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  # 👉 Steps uses
-
-      # 5. Probar la construcción completa usando Docker Compose
-      # Esto asegura que tanto el Dockerfile como el archivo Compose no tengan errores de formato
-      # Pasamos los secretos como variables de entorno para que Docker Compose los reconozca
-      - name: Verificar Construcción con Docker Compose
+      # 5. Ejecutar batería de pruebas conectándose al MySQL del Runner
+      - name: Ejecutar Pruebas Automatizadas (Tests)
+        run: mvn test
         env:
+          DB_URL: jdbc:mysql://localhost:3306/gamermatch_db?useSSL=false&serverTimezone=UTC
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
+
+      # 6. Configurar entorno de compilación nativo de Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 7. Orquestación y verificación en vivo usando Docker Compose
+      - name: Verificar Integración Completa con Docker Compose
         run: |
-          docker compose build gamer-app
-
-      # 6. (Opcional) Mensaje de éxito
-      - name: Estado del Pipeline
-        run: echo "La compilación y la verificación de Docker se completaron con éxito."
-
+          # Exportamos las credenciales al entorno de la terminal para Compose
+          export DB_USER="${{ secrets.DB_USER }}"
+          export DB_PASS="${{ secrets.DB_PASS }}"
+          
+          echo "Construyendo imágenes desde el ecosistema Compose..."
+          docker compose build --no-cache
+          
+          echo "Levantando servicios en segundo plano..."
+          docker compose up -d
+          
+          echo "Esperando a que la aplicación Java y la BD inicien (15s)..."
+          sleep 15
+          
+          echo "--- Estado de los contenedores activos ---"
+          docker ps
+          
+          echo "--- Ejecutando Prueba de Humo (HTTP Smoke Test) ---"
+          # Intenta pegarle al puerto expuesto en tu docker-compose.yaml (8080)
+          # Si devuelve un código de error (500, 404, etc.) o no responde, el pipeline fallará de inmediato.
+          curl -f http://localhost:8080/ || { 
+            echo "❌ ERROR: La aplicación no responde o lanzó un fallo en el puerto 8080."; 
+            echo "--- LOGS DEL CONTENEDOR DE APLICACIÓN ---";
+            docker compose logs --tail=100 $CONTAINER_NAME;
+            exit 1; 
+          }
+          
+          echo "✅ ¡Prueba de humo superada con éxito!"
+          
+          echo "Desmantelando infraestructura de prueba..."
+          docker compose down -v
