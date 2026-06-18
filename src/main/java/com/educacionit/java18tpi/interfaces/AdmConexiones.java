@@ -80,7 +80,7 @@ public interface AdmConexiones {
 		if (conn == null) {
 			log.severe("[DB-LOG] [ALERTA] ObtenerConexion() va a retornar NULL. Tu DAO va a fallar con NullPointerException.");
 		}
-
+        log.info("[DB-LOG] [INFO] ObtenerConexion() va a retornar conexion");
 		return conn;
 	}
 }
