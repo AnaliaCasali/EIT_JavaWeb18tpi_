@@ -1,86 +1,94 @@
 package com.educacionit.java18tpi.interfaces;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
-// Importamos las clases nativas de logging de Java
-import java.util.logging.Logger;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public interface AdmConexiones {
+public enum AdmConexiones {
+    INSTANCE;
 
-	// Inicializamos el logger estático para la interfaz
-	Logger log = Logger.getLogger(AdmConexiones.class.getName());
+    private  final Logger log =
+            Logger.getLogger(AdmConexiones.class.getName());
 
-	default Connection ObtenerConexion() {
+    private final HikariDataSource dataSource;
 
-		final String DRIVER;
-		final String DB_CADENA_CONEXION;
-		final String DB_USUARIO;
-		final String DB_PASSWORD;
+    // El constructor del enum se ejecuta UNA sola vez, al cargar la clase.
+    AdmConexiones() {
+        HikariConfig config = new HikariConfig();
 
-		Connection conn = null;
-		try {
-			log.info("[DB-LOG] Iniciando intento de conexión a la base de datos...");
+        // 1. Cargar database.properties desde el classpath
+        Properties props = cargarProperties();
 
-			// 1. Intentar leer desde variables de entorno (Railway, CI, producción)
-			String envUrl  = System.getenv("DB_URL");
-			String envUser = System.getenv("DB_USER");
-			String envPass = System.getenv("DB_PASS");
+        // 2. Conexión: env vars tienen prioridad sobre el .properties
+        config.setJdbcUrl(     resolver("DB_URL",  props, "db.url"));
+        config.setUsername(    resolver("DB_USER", props, "db.user"));
+        config.setPassword(    resolver("DB_PASS", props, "db.pass"));
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
 
-			if (envUrl != null && envUser != null && envPass != null) {
-				log.info("[DB-LOG] -> Modo: PRODUCCIÓN (Variables de entorno encontradas)");
-				log.info("[DB-LOG] -> Conectando a URL: " + envUrl);
-				log.info("[DB-LOG] -> Usuario: " + envUser);
+        // 3. Pool: leído siempre desde el .properties
+        config.setMaximumPoolSize(  intProp(props, "hikari.maximumPoolSize",  15));
+        config.setMinimumIdle(      intProp(props, "hikari.minimumIdle",       2));
+        config.setConnectionTimeout(intProp(props, "hikari.connectionTimeout",10000));
+        config.setIdleTimeout(      intProp(props, "hikari.idleTimeout",    300000));
+        config.setMaxLifetime(      intProp(props, "hikari.maxLifetime",    600000));
 
-				DRIVER             = "com.mysql.cj.jdbc.Driver";
-				DB_CADENA_CONEXION = envUrl;
-				DB_USUARIO         = envUser;
-				DB_PASSWORD        = envPass;
-			} else {
-				log.warning("[DB-LOG] -> Modo: DESARROLLO (Faltan variables de entorno, usando database.properties)");
+        dataSource = new HikariDataSource(config);
+        log.info("[DB] Pool HikariCP inicializado.");
+    }
 
-				// 2. Fallback: leer del archivo database.properties (desarrollo local)
-				Properties dbProperties = new Properties();
-/*				*/
-				dbProperties.load(
-						Connection.class.getClassLoader()
-								.getResourceAsStream("database.properties")
-				);
+    /** Devuelve una conexión del pool. Usar siempre en try-with-resources. */
+    public Connection obtenerConexion() {
+        try {
+            return dataSource.getConnection();
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "[DB] Error obteniendo conexión del pool", e);
+            throw new RuntimeException("No se pudo obtener conexión", e);
+        }
+    }
 
-				DRIVER             = dbProperties.getProperty("db.driver");
-				DB_CADENA_CONEXION = dbProperties.getProperty("db.url");
-				DB_USUARIO         = dbProperties.getProperty("db.user", "root");
-				DB_PASSWORD        = dbProperties.getProperty("db.pass");
+    /** Llamar desde AppContextListener.contextDestroyed() */
+    public void cerrarPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            log.info("[DB] Pool cerrado correctamente.");
+        }
+    }
 
-				log.info("[DB-LOG] -> URL local: " + DB_CADENA_CONEXION);
-			}
+    // ── funciones privadas  ──────────────────────────────────────────────────
 
-			log.info("[DB-LOG] Cargando Driver: " + DRIVER);
-			Class.forName(DRIVER);
+    private Properties cargarProperties() {
+        Properties props = new Properties();
+        try (InputStream is = AdmConexiones.class
+                .getClassLoader()
+                .getResourceAsStream("database.properties")) {
+            if (is == null) {
+                log.warning("[DB] database.properties no encontrado en classpath.");
+                return props;
+            }
+            props.load(is);
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "[DB] Error leyendo database.properties", e);
+        }
+        return props;
+    }
 
-			log.info("[DB-LOG] Solicitando conexión al DriverManager...");
-			conn = DriverManager.getConnection(DB_CADENA_CONEXION, DB_USUARIO, DB_PASSWORD);
+    /** Env var tiene prioridad; si no existe, usa el .properties. */
+    private String resolver(String envKey, Properties props, String propKey) {
+        String env = System.getenv(envKey);
+        return (env != null && !env.isBlank()) ? env : props.getProperty(propKey);
+    }
 
-			if (conn != null && !conn.isClosed()) {
-				log.info("[DB-LOG] ¡ÉXITO! Conexión establecida correctamente con MySQL.");
-			}
-
-		} catch (IOException e) {
-			log.log(Level.SEVERE, "[DB-LOG] [ERROR IO] Fallo al leer el archivo database.properties", e);
-		} catch (SQLException e) {
-			log.log(Level.SEVERE, "[DB-LOG] [ERROR SQL] Error crítico al conectar a MySQL. Mensaje: " + e.getMessage(), e);
-		} catch (ClassNotFoundException e) {
-			log.log(Level.SEVERE, "[DB-LOG] [ERROR DRIVER] No se encontró la clase del Driver de MySQL", e);
-		}
-
-		// Alerta crítica si el objeto se va vacío
-		if (conn == null) {
-			log.severe("[DB-LOG] [ALERTA] ObtenerConexion() va a retornar NULL. Tu DAO va a fallar con NullPointerException.");
-		}
-        log.info("[DB-LOG] [INFO] ObtenerConexion() va a retornar conexion");
-		return conn;
-	}
+    private int intProp(Properties props, String key, int defaultVal) {
+        try {
+            return Integer.parseInt(props.getProperty(key));
+        } catch (NumberFormatException | NullPointerException e) {
+            return defaultVal;
+        }
+    }
 }

@@ -16,7 +16,7 @@ import com.educacionit.java18tpi.entidades.Torneo;
 import com.educacionit.java18tpi.interfaces.AdmConexiones;
 import com.educacionit.java18tpi.interfaces.DAO;
 
-public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones {
+public class InscripcionImpl implements DAO<Inscripcion, Integer> {
 
     // Consultas relacionales complejas para armar los objetos en Java
     private static final String SQL_GET_ALL = 
@@ -38,7 +38,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
     @Override
     public List<Inscripcion> getAll() {
         List<Inscripcion> lista = new ArrayList<>();
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn = AdmConexiones.INSTANCE.obtenerConexion();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(SQL_GET_ALL)) {
             
@@ -73,7 +73,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
     @Override
     public Inscripcion getById(Integer id) {
         Inscripcion ins = new Inscripcion();
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_GET_BY_ID)) {
             
             pst.setInt(1, id);
@@ -104,7 +104,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
 
     @Override
     public void insert(Inscripcion objeto) {
-        try (Connection conn = this.ObtenerConexion();
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_INSERT)) {
 
             pst.setInt(1, objeto.getJugador().getId());
@@ -119,7 +119,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
 
     @Override
     public void update(Inscripcion objeto, Integer id) {
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_UPDATE)) {
             
             pst.setInt(1, objeto.getJugador().getId());
@@ -133,7 +133,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
 
     @Override
     public void delete(Integer id) {
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_DELETE)) {
             
             pst.setInt(1, id);
@@ -146,7 +146,7 @@ public class InscripcionImpl implements DAO<Inscripcion, Integer>, AdmConexiones
     @Override
     public boolean exists(Integer id) {
         boolean existe = false;
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_EXISTS_BY_ID)) {
             
             pst.setInt(1, id);

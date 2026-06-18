@@ -14,7 +14,7 @@ import com.educacionit.java18tpi.interfaces.AdmConexiones;
 import com.educacionit.java18tpi.interfaces.DAO;
 
 
-public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
+public class TorneoImpl implements DAO<Torneo, Integer> {
 
     private static final String SQL_INSERT = "INSERT INTO torneos (nombre_torneo, nombre_juego, cupo, precio, plataforma) VALUES (?, ?, ?, ?, ?)";
     private static final String SQL_UPDATE = "UPDATE torneos SET nombre_torneo=?, nombre_juego=?, cupo=?, precio=?, plataforma=? WHERE id=?";
@@ -25,7 +25,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
     @Override
     public List<Torneo> getAll() {
         List<Torneo> lista = new ArrayList<>();
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(SQL_GET_ALL)) {
             
@@ -48,7 +48,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
     @Override
     public Torneo getById(Integer id) {
         Torneo t = new Torneo();
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_EXISTS_BY_ID)) {
             
             pst.setInt(1, id);
@@ -70,7 +70,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
 
     @Override
     public void insert(Torneo objeto) {
-        try (Connection conn = this.ObtenerConexion();
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_INSERT)) {
 
             pst.setString(1, objeto.getNombreTorneo());
@@ -86,7 +86,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
 
     @Override
     public void update(Torneo objeto, Integer id) {
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_UPDATE)) {
             
             pst.setString(1, objeto.getNombreTorneo());
@@ -103,7 +103,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
 
     @Override
     public void delete(Integer id) {
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_DELETE)) {
             
             pst.setInt(1, id);
@@ -116,7 +116,7 @@ public class TorneoImpl implements DAO<Torneo, Integer>, AdmConexiones {
     @Override
     public boolean exists(Integer id) {
         boolean existe = false;
-        try (Connection conn = this.ObtenerConexion(); 
+        try (Connection conn =  AdmConexiones.INSTANCE.obtenerConexion();
              PreparedStatement pst = conn.prepareStatement(SQL_EXISTS_BY_ID)) {
             
             pst.setInt(1, id);

@@ -6,8 +6,7 @@ services:
     container_name: gamermatch_mysql_db
     restart: always
     environment:
-      # <-- ESTA VARIABLE CREA LA BD OBLIGATORIAMENTE
-      MYSQL_ROOT_PASSWORD: root_secure_pass
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
       MYSQL_DATABASE: gamermatch_db
     ports:
       - "3307:3306"
@@ -28,8 +27,8 @@ services:
       - "8080:8080"
     environment:
       - DB_URL=jdbc:mysql://gamer-db:3306/gamermatch_db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      - DB_USER=root
-      - DB_PASS=root_secure_pass
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
     depends_on:
       - gamer-db
     networks:
