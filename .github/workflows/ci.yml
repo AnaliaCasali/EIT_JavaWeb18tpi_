@@ -40,4 +40,4 @@ jobs:
 
       # 6. (Opcional) Mensaje de éxito
       - name: Estado del Pipeline
-        run: echo "La compilación y la verificación de Docker se completaron con éxito."
+        run: echo "La compilación y la verificación de Docker se completaron con éxito....."
